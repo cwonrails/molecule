@@ -3,14 +3,14 @@ const settings = require('electron-settings');
 const sendMessageToWindow = require('./send-message-to-window');
 
 // have version to easily reset preferences in the future
-const v = '1.0.0';
+const v = '2.0.0';
 
 const defaultPreferences = {
   darkTheme: false,
   homePage: null,
   injectCSS: '',
   injectJS: '',
-  navigationBarPosition: 'left',
+  lastPage: null,
   rememberLastPage: false,
   showNavigationBar: true,
   showTitleBar: false,
@@ -18,7 +18,7 @@ const defaultPreferences = {
   useHardwareAcceleration: true,
   userAgent: null,
   useSpellChecker: true,
-  lastPage: null,
+  workspaceBarPosition: 'left',
 };
 
 const getPreferences = () => Object.assign({}, defaultPreferences, settings.get(`preferences.${v}`, defaultPreferences));

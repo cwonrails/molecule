@@ -3,50 +3,56 @@ import PropTypes from 'prop-types';
 import classnames from 'classnames';
 import semver from 'semver';
 
-import HomeIcon from 'material-ui-icons/Home';
+import AddIcon from 'material-ui-icons/Add';
+import Avatar from 'material-ui/Avatar';
 import IconButton from 'material-ui/IconButton';
-import KeyboardArrowLeftIcon from 'material-ui-icons/KeyboardArrowLeft';
-import KeyboardArrowRightIcon from 'material-ui-icons/KeyboardArrowRight';
 import Paper from 'material-ui/Paper';
-import RefreshIcon from 'material-ui-icons/Refresh';
 import SettingsIcon from 'material-ui-icons/Settings';
-import Tooltip from 'material-ui/Tooltip';
 import SystemUpdateAltIcon from 'material-ui-icons/SystemUpdateAlt';
+import Tooltip from 'material-ui/Tooltip';
 
 import connectComponent from '../helpers/connect-component';
 
 import { open as openDialogPreferences } from '../state/dialogs/preferences/actions';
+import {
+  addWorkspace,
+  setActiveWorkspace,
+} from '../state/root/workspaces/actions';
 
 import {
-  STRING_BACK,
-  STRING_FORWARD,
-  STRING_HOME,
+  STRING_ADD_WORKSPACE,
   STRING_PREFERENCES,
-  STRING_RELOAD,
   STRING_UPDATE_AVAILABLE,
 } from '../constants/strings';
 
-const styles = {
+const styles = theme => ({
   container: {
-    zIndex: 2,
+    zIndex: 3,
     borderRadius: 0,
     display: 'flex',
+    flexDirection: 'column',
+    height: '100%',
+    width: 68,
+    padding: theme.spacing.unit,
+    paddingTop: 18,
     boxSizing: 'border-box',
     WebkitAppRegion: 'drag',
     WebkitUserSelect: 'none',
-    width: '100%',
-    height: 'auto',
-    flexDirection: 'row',
-    padding: '0 4px',
+  },
+  containerWithoutTitlebar: {
+    paddingTop: 28,
   },
   innerContainer: {
-    alignItems: 'initial',
-    display: 'flex',
-    flex: 1,
-    flexDirection: 'row',
     width: '100%',
+    display: 'flex',
+    flexDirection: 'column',
+    flex: 1,
+    alignItems: 'center',
   },
   innerContainerEnd: {
+    flex: '0 0 auto',
+  },
+  innerContainerEndVert: {
     flex: '0 0 auto',
     alignItems: 'flex-end',
   },
@@ -68,23 +74,49 @@ const styles = {
   badge: {
     marginLeft: 12,
   },
-};
+  avatar: {
+    marginBottom: 12,
+    cursor: 'pointer',
+  },
+  avatarActive: {
+    backgroundColor: theme.palette.primary[500],
+  },
+});
 
-const NavigationBar = (props) => {
+
+const renderCombinator = combinator =>
+  combinator
+    .replace(/\+/g, ' + ')
+    .replace('alt', process.platform === 'win32' ? 'alt' : '⌥')
+    .replace('shift', process.platform === 'win32' ? 'shift' : '⇧')
+    .replace('mod', process.platform === 'win32' ? 'ctrl' : '⌘')
+    .replace('meta', '⌘')
+    .toUpperCase();
+
+const WorkspaceBar = (props) => {
   const {
-    canGoBack,
-    canGoForward,
     latestMoleculeVersion,
     classes,
-    onBackButtonClick,
-    onForwardButtonClick,
-    onHomeButtonClick,
+    workspaceBarPosition,
+    onAddWorkspace,
+    onSetActiveWorkspace,
     onOpenDialogPreferences,
-    onRefreshButtonClick,
     showTitleBar,
+    workspaceList,
+    activeId,
   } = props;
 
-  const tooltipPlacement = 'bottom';
+  let tooltipPlacement;
+  switch (workspaceBarPosition) {
+    case 'left':
+      tooltipPlacement = 'right';
+      break;
+    case 'right':
+      tooltipPlacement = 'left';
+      break;
+    default:
+      tooltipPlacement = 'right';
+  }
 
   // check for update
   const currentVersion = window.packageJson.version;
@@ -99,51 +131,31 @@ const NavigationBar = (props) => {
       )}
     >
       <div className={classes.innerContainer}>
+        {workspaceList.map((workspace, i) => (
+          <Tooltip
+            key={workspace.identifier}
+            title={renderCombinator(`ctrl+${i + 1}`)}
+            placement={tooltipPlacement}
+          >
+            <Avatar
+              className={classnames(
+                classes.avatar, workspace.identifier === activeId && classes.avatarActive)}
+              onClick={() => onSetActiveWorkspace(workspace.identifier)}
+            >
+              {workspace.name[0]}
+            </Avatar>
+          </Tooltip>
+        ))}
         <Tooltip
-          title={STRING_HOME}
+          title={`${STRING_ADD_WORKSPACE} (${renderCombinator('ctrl+n')})`}
           placement={tooltipPlacement}
         >
-          <IconButton
-            aria-label={STRING_HOME}
-            onClick={onHomeButtonClick}
+          <Avatar
+            className={classes.avatar}
+            onClick={onAddWorkspace}
           >
-            <HomeIcon />
-          </IconButton>
-        </Tooltip>
-        <Tooltip
-          title={STRING_BACK}
-          placement={tooltipPlacement}
-        >
-          <IconButton
-            aria-label={STRING_BACK}
-            disabled={!canGoBack}
-            onClick={onBackButtonClick}
-          >
-            <KeyboardArrowLeftIcon />
-          </IconButton>
-        </Tooltip>
-        <Tooltip
-          title={STRING_FORWARD}
-          placement={tooltipPlacement}
-        >
-          <IconButton
-            aria-label={STRING_FORWARD}
-            disabled={!canGoForward}
-            onClick={onForwardButtonClick}
-          >
-            <KeyboardArrowRightIcon />
-          </IconButton>
-        </Tooltip>
-        <Tooltip
-          title={STRING_RELOAD}
-          placement={tooltipPlacement}
-        >
-          <IconButton
-            aria-label={STRING_RELOAD}
-            onClick={onRefreshButtonClick}
-          >
-            <RefreshIcon />
-          </IconButton>
+            <AddIcon />
+          </Avatar>
         </Tooltip>
       </div>
 
@@ -177,39 +189,41 @@ const NavigationBar = (props) => {
   );
 };
 
-NavigationBar.defaultProps = {
-  canGoBack: false,
-  canGoForward: false,
+WorkspaceBar.defaultProps = {
   latestMoleculeVersion: '1.0.0',
   showTitleBar: false,
 };
 
-NavigationBar.propTypes = {
-  canGoBack: PropTypes.bool,
-  canGoForward: PropTypes.bool,
+WorkspaceBar.propTypes = {
+  activeId: PropTypes.string.isRequired,
   classes: PropTypes.object.isRequired,
   latestMoleculeVersion: PropTypes.string,
-  onBackButtonClick: PropTypes.func.isRequired,
-  onForwardButtonClick: PropTypes.func.isRequired,
-  onHomeButtonClick: PropTypes.func.isRequired,
+  workspaceBarPosition: PropTypes.string.isRequired,
+  onAddWorkspace: PropTypes.func.isRequired,
+  onSetActiveWorkspace: PropTypes.func.isRequired,
   onOpenDialogPreferences: PropTypes.func.isRequired,
-  onRefreshButtonClick: PropTypes.func.isRequired,
   showTitleBar: PropTypes.bool,
+  workspaceList: PropTypes.arrayOf(PropTypes.object).isRequired,
 };
 
 const mapStateToProps = state => ({
+  activeId: state.workspaces.activeId,
   canGoBack: state.nav.canGoBack,
   canGoForward: state.nav.canGoForward,
   latestMoleculeVersion: state.version.apiData.moleculeVersion,
-  showTitleBar: state.preferences.showTitleBar,
+  showTitleBar: !state.preferences.showNavigationBar || state.preferences.showTitleBar,
+  workspaceBarPosition: state.preferences.navigationBarPosition,
+  workspaceList: state.workspaces.list,
 });
 
 const actionCreators = {
+  addWorkspace,
   openDialogPreferences,
+  setActiveWorkspace,
 };
 
 export default connectComponent(
-  NavigationBar,
+  WorkspaceBar,
   mapStateToProps,
   actionCreators,
   styles,

@@ -67,7 +67,7 @@ import {
   STRING_LEFT,
   STRING_LOG_OUT,
   STRING_LOGGED_IN_AS,
-  STRING_NAVIGATION_BAR_POSITION,
+  STRING_WORKSPACE_BAR_POSITION,
   STRING_NAVIGATION,
   STRING_NONE,
   STRING_PREFERENCES,
@@ -84,7 +84,6 @@ import {
   STRING_SWIPE_TO_NAVIGATE_DESC,
   STRING_SWIPE_TO_NAVIGATE,
   STRING_SYSTEM,
-  STRING_TOP,
   STRING_TRACKPAD,
   STRING_USE_HARDWARE_ACCELERATION,
   STRING_USER_AGENT,
@@ -155,10 +154,8 @@ const styles = theme => ({
   },
 });
 
-const getNavigationBarPositionString = (navigationBarPosition) => {
-  switch (navigationBarPosition) {
-    case 'top':
-      return STRING_TOP;
+const getPositionString = (position) => {
+  switch (position) {
     case 'right':
       return STRING_RIGHT;
     case 'left':
@@ -198,7 +195,7 @@ class PreferencesDialog extends React.Component {
       injectCSS,
       injectJS,
       isLoggedIn,
-      navigationBarPosition,
+      workspaceBarPosition,
       onClose,
       onOpenDialogClearBrowsingData,
       onOpenDialogHomePage,
@@ -443,24 +440,24 @@ class PreferencesDialog extends React.Component {
                 {showNavigationBar && <Divider />}
                 {showNavigationBar && <ListItem button>
                   <ListItemText
-                    primary={STRING_NAVIGATION_BAR_POSITION}
-                    secondary={getNavigationBarPositionString(navigationBarPosition)}
+                    primary={STRING_WORKSPACE_BAR_POSITION}
+                    secondary={getPositionString(workspaceBarPosition)}
                   />
                   <ListItemSecondaryAction>
                     <EnhancedMenu
-                      id="navigationBarPosition"
+                      id="workspaceBarPosition"
                       buttonElement={(
                         <IconButton aria-label={STRING_CHANGE}>
                           <KeyboardArrowRightIcon />
                         </IconButton>
                       )}
                     >
-                      {['left', 'right', 'top'].map(option => (
+                      {['left', 'right'].map(option => (
                         <MenuItem
                           key={option}
-                          onClick={() => requestSetPreference('navigationBarPosition', option)}
+                          onClick={() => requestSetPreference('workspaceBarPosition', option)}
                         >
-                          {getNavigationBarPositionString(option)}
+                          {getPositionString(option)}
                         </MenuItem>
                       ))}
                     </EnhancedMenu>
@@ -783,7 +780,7 @@ PreferencesDialog.defaultProps = {
   homePage: null,
   injectCSS: '',
   injectJS: '',
-  navigationBarPosition: 'left',
+  workspaceBarPosition: 'left',
   open: false,
   rememberLastPage: false,
   showNavigationBar: true,
@@ -802,7 +799,7 @@ PreferencesDialog.propTypes = {
   injectCSS: PropTypes.string,
   injectJS: PropTypes.string,
   isLoggedIn: PropTypes.bool.isRequired,
-  navigationBarPosition: PropTypes.oneOf(['top', 'left', 'right']),
+  workspaceBarPosition: PropTypes.oneOf(['left', 'right']),
   onClose: PropTypes.func.isRequired,
   onOpenDialogClearBrowsingData: PropTypes.func.isRequired,
   onOpenDialogHomePage: PropTypes.func.isRequired,
@@ -827,7 +824,7 @@ const mapStateToProps = (state) => {
     homePage,
     injectCSS,
     injectJS,
-    navigationBarPosition,
+    workspaceBarPosition,
     rememberLastPage,
     showNavigationBar,
     showTitleBar,
@@ -844,7 +841,7 @@ const mapStateToProps = (state) => {
     injectCSS,
     injectJS,
     isLoggedIn: Boolean(state.auth.token && state.auth.token !== 'anonymous'),
-    navigationBarPosition,
+    workspaceBarPosition,
     open: state.dialogs.preferences.open,
     rememberLastPage,
     showNavigationBar,

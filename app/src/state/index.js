@@ -14,6 +14,7 @@ import screen from './root/screen/reducers';
 import snackbar from './root/snackbar/reducers';
 import user from './root/user/reducers';
 import version from './root/version/reducers';
+import workspaces from './root/workspaces/reducers';
 
 const rootReducer = combineReducers({
   auth,
@@ -26,6 +27,7 @@ const rootReducer = combineReducers({
   snackbar,
   user,
   version,
+  workspaces,
 });
 
 const configureStore = initialState =>

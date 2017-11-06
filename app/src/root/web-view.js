@@ -155,7 +155,10 @@ class ElectronWebView extends React.Component {
     };
   }
 
-  shouldComponentUpdate() {
+  shouldComponentUpdate(nextProps) {
+    if (nextProps.parentClassName !== this.props.parentClassName) {
+      this.c.className = nextProps.parentClassName;
+    }
     return false;
   }
 

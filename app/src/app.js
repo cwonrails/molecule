@@ -1,6 +1,7 @@
 /* global ipcRenderer */
-import React from 'react';
+import classnames from 'classnames';
 import PropTypes from 'prop-types';
+import React from 'react';
 
 import grey from 'material-ui/colors/grey';
 
@@ -42,6 +43,7 @@ import NoConnection from './root/no-connection';
 import TargetUrlBar from './root/target-url-bar';
 import UpdaterMessage from './root/updater-message';
 import WebView from './root/web-view';
+import WorkspaceBar from './root/workspace-bar';
 
 import DialogAbout from './dialogs/about';
 import DialogClearBrowsingData from './dialogs/clear-browsing-data';
@@ -112,6 +114,9 @@ const styles = theme => ({
     height: '100%',
     width: '100%',
   },
+  webviewHidden: {
+    display: 'none',
+  },
 });
 
 class App extends React.Component {
@@ -129,6 +134,8 @@ class App extends React.Component {
     this.onReload = this.onReload.bind(this);
     this.onSetZoomFactor = this.onSetZoomFactor.bind(this);
     this.onToggleDevTools = this.onToggleDevTools.bind(this);
+
+    this.webView = {};
   }
 
   componentDidMount() {
@@ -155,7 +162,7 @@ class App extends React.Component {
 
     ipcRenderer.on('toggle-find-in-page-dialog', () => {
       if (this.props.findInPageIsOpen) {
-        const c = this.webView;
+        const c = this.webView[this.props.activeId];
         c.stopFindInPage('clearSelection');
         this.props.onUpdateFindInPageMatches(0, 0);
       }
@@ -179,9 +186,10 @@ class App extends React.Component {
     const {
       findInPageIsOpen,
       findInPageText,
+      activeId,
     } = this.props;
 
-    const c = this.webView;
+    const c = this.webView[activeId];
 
     // Restart search if text is available
     if (findInPageIsOpen && findInPageText.length > 0) {
@@ -213,7 +221,7 @@ class App extends React.Component {
       return;
     }
 
-    const c = this.webView;
+    const c = this.webView[this.props.activeId];
 
     setTimeout(() => {
       c.executeJavaScript(
@@ -234,9 +242,10 @@ class App extends React.Component {
       onUpdateIsLoading,
       onUpdateCanGoBack,
       onUpdateCanGoForward,
+      activeId,
     } = this.props;
 
-    const c = this.webView;
+    const c = this.webView[activeId];
 
     onUpdateIsLoading(false);
     onUpdateCanGoBack(c.canGoBack());
@@ -248,7 +257,7 @@ class App extends React.Component {
   onNewWindow(e) {
     const nextUrl = e.url;
 
-    const c = this.webView;
+    const c = this.webView[this.props.activeId];
 
     // eslint-disable-next-line
     console.log(`newWindow: ${nextUrl}`);
@@ -279,7 +288,7 @@ class App extends React.Component {
   }
 
   onToggleDevTools() {
-    const c = this.webView;
+    const c = this.webView[this.props.activeId];
     if (c.isDevToolsOpened()) {
       c.closeDevTools();
     } else {
@@ -288,17 +297,17 @@ class App extends React.Component {
   }
 
   onSetZoomFactor(factor) {
-    const c = this.webView;
+    const c = this.webView[this.props.activeId];
     c.setZoomFactor(factor);
   }
 
   onReload() {
-    const c = this.webView;
+    const c = this.webView[this.props.activeId];
     c.reload();
   }
 
   onGoHome() {
-    const c = this.webView;
+    const c = this.webView[this.props.activeId];
     const { homePage } = this.props;
 
     let homeUrl = window.shellInfo.url;
@@ -310,24 +319,25 @@ class App extends React.Component {
   }
 
   onGoBack() {
-    const c = this.webView;
+    const c = this.webView[this.props.activeId];
     c.goBack();
   }
 
   onGoForward() {
-    const c = this.webView;
+    const c = this.webView[this.props.activeId];
     c.goForward();
   }
 
 
   onCopyUrl() {
-    const c = this.webView;
+    const c = this.webView[this.props.activeId];
     const currentURL = c.getURL();
     writeToClipboard(currentURL);
   }
 
   render() {
     const {
+      activeId,
       classes,
       customUserAgent,
       findInPageIsOpen,
@@ -335,7 +345,6 @@ class App extends React.Component {
       isFailed,
       isLoading,
       lastPage,
-      navigationBarPosition,
       onUpdateFindInPageMatches,
       onUpdateIsFailed,
       onUpdateIsLoading,
@@ -343,6 +352,7 @@ class App extends React.Component {
       rememberLastPage,
       showNavigationBar,
       showTitleBar,
+      workspaceList,
     } = this.props;
 
     const {
@@ -398,12 +408,17 @@ class App extends React.Component {
         )}
 
         <div className={classes.root}>
-          {navigationBarPosition === 'left' && navElement}
+          <WorkspaceBar
+            onHomeButtonClick={onGoHome}
+            onBackButtonClick={onGoBack}
+            onForwardButtonClick={onGoForward}
+            onRefreshButtonClick={onReload}
+          />
           {isFailed && (
             <NoConnection
               onTryAgainButtonClick={() => {
                 onUpdateIsFailed(false);
-                const c = this.webView;
+                const c = this.webView[activeId];
                 c.reload();
               }}
             />
@@ -411,58 +426,62 @@ class App extends React.Component {
           <div className={classes.rightContent}>
             <UpdaterMessage />
             {isLoading && <Loading />}
-            {navigationBarPosition === 'top' && navElement}
+            {navElement}
             {findInPageIsOpen && (
               <FindInPage
                 onRequestFind={(text, forward) => {
-                  const c = this.webView;
+                  const c = this.webView[activeId];
                   c.findInPage(text, { forward });
                 }}
                 onRequestStopFind={() => {
-                  const c = this.webView;
+                  const c = this.webView[activeId];
                   c.stopFindInPage('clearSelection');
                   onUpdateFindInPageMatches(0, 0);
                 }}
               />
             )}
-            <WebView
-              allowpopups
-              autoresize
-              className={classes.webview}
-              nodeintegration={false}
-              parentClassName={classes.webviewContainer}
-              partition="persist:app"
-              plugins
-              preload={`file://${getWebViewPreloadPath()}`}
-              ref={(c) => { this.webView = c; }}
-              useragent={userAgent}
-              webpreferences="nativeWindowOpen=no"
-              src={startUrl}
-              onDidFailLoad={onDidFailLoad}
-              onDidStartLoading={() => onUpdateIsLoading(true)}
-              onDidStopLoading={onDidStopLoading}
-              onFoundInPage={({ result }) =>
-                onUpdateFindInPageMatches(result.activeMatchOrdinal, result.matches)}
-              onNewWindow={onNewWindow}
-              onPageTitleUpdated={({ title }) => {
-                document.title = title;
+            {workspaceList.map(workspace => (
+              <WebView
+                allowpopups
+                autoresize
+                className={classes.webview}
+                nodeintegration={false}
+                parentClassName={classnames(
+                  classes.webviewContainer,
+                  workspace.identifier !== activeId && classes.webviewHidden,
+                )}
+                partition={`persist:${workspace.identifier}`}
+                plugins
+                preload={`file://${getWebViewPreloadPath()}`}
+                ref={(c) => { this.webView[workspace.identifier] = c; }}
+                useragent={userAgent}
+                webpreferences="nativeWindowOpen=no"
+                src={startUrl}
+                onDidFailLoad={onDidFailLoad}
+                onDidStartLoading={() => onUpdateIsLoading(true)}
+                onDidStopLoading={onDidStopLoading}
+                onFoundInPage={({ result }) =>
+                  onUpdateFindInPageMatches(result.activeMatchOrdinal, result.matches)}
+                onNewWindow={onNewWindow}
+                onPageTitleUpdated={({ title }) => {
+                  document.title = title;
 
-                ipcRenderer.send('set-title', title);
+                  ipcRenderer.send('set-title', title);
 
-                const itemCountRegex = /[([{](\d*?)[}\])]/;
-                const match = itemCountRegex.exec(title);
-                const newBadge = match ? match[1] : '';
+                  const itemCountRegex = /[([{](\d*?)[}\])]/;
+                  const match = itemCountRegex.exec(title);
+                  const newBadge = match ? match[1] : '';
 
-                setBadge(newBadge);
-              }}
-              onUpdateTargetUrl={({ url }) => {
-                onUpdateTargetUrl(url);
-              }}
-              onDidGetRedirectRequest={onDidGetRedirectRequest}
-            />
+                  setBadge(newBadge);
+                }}
+                onUpdateTargetUrl={({ url }) => {
+                  onUpdateTargetUrl(url);
+                }}
+                onDidGetRedirectRequest={onDidGetRedirectRequest}
+              />
+            ))}
             <TargetUrlBar />
           </div>
-          {navigationBarPosition === 'right' && navElement}
           <EnhancedSnackbar />
         </div>
       </div>
@@ -484,6 +503,7 @@ App.defaultProps = {
 };
 
 App.propTypes = {
+  activeId: PropTypes.string.isRequired,
   classes: PropTypes.object.isRequired,
   customUserAgent: PropTypes.string,
   findInPageIsOpen: PropTypes.bool.isRequired,
@@ -492,7 +512,6 @@ App.propTypes = {
   isFailed: PropTypes.bool,
   isLoading: PropTypes.bool,
   lastPage: PropTypes.string,
-  navigationBarPosition: PropTypes.oneOf(['left', 'right', 'top']),
   onGetLatestVersion: PropTypes.func.isRequired,
   onScreenResize: PropTypes.func.isRequired,
   onToggleFindInPageDialog: PropTypes.func.isRequired,
@@ -505,6 +524,7 @@ App.propTypes = {
   rememberLastPage: PropTypes.bool,
   showNavigationBar: PropTypes.bool,
   showTitleBar: PropTypes.bool,
+  workspaceList: PropTypes.arrayOf(PropTypes.object).isRequired,
 };
 
 const mapStateToProps = state => ({
@@ -516,10 +536,11 @@ const mapStateToProps = state => ({
   isFullScreen: state.screen.isFullScreen,
   isLoading: state.nav.isLoading,
   lastPage: state.preferences.lastPage,
-  navigationBarPosition: state.preferences.navigationBarPosition,
   rememberLastPage: state.preferences.rememberLastPage,
   showNavigationBar: state.preferences.showNavigationBar,
   showTitleBar: state.preferences.showTitleBar,
+  workspaceList: state.workspaces.list,
+  activeId: state.workspaces.activeId,
 });
 
 const actionCreators = {
